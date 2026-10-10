@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 font-sans antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white;
+  }
+}
+
+@layer components {
+  /* ── Shared admin component classes (unchanged) ───────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+      transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply btn border border-ink-200 bg-white text-ink-800 hover:bg-ink-50;
+  }
+  .btn-ghost {
+    @apply btn text-ink-700 hover:bg-ink-100;
+  }
+  .btn-danger {
+    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+  .input {
+    @apply w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900
+      placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
+  }
+  .card {
+    @apply rounded-xl border border-ink-200/70 bg-white shadow-card;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CUSTOMER UI — scoped under .cafe so it never affects the admin panel.
+   Warm, editorial cafe identity: espresso / ivory / terracotta / sage.
+   ───────────────────────────────────────────────────────────────────────── */
+@layer base {
+  .cafe {
+    font-family: theme('fontFamily.body');
+    @apply bg-ivory text-espresso-700;
+    /* Safe-area custom props for notched phones */
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  .cafe h1, .cafe h2, .cafe h3, .cafe h4, .cafe h5 {
+    font-family: theme('fontFamily.body');
+    letter-spacing: -0.01em;
+  }
+  .cafe .font-serif,
+  .cafe h1.font-serif, .cafe h2.font-serif, .cafe h3.font-serif {
+    font-family: theme('fontFamily.serif');
+    letter-spacing: 0;
+    font-weight: 400;
+  }
+  .cafe :focus-visible {
+    @apply outline-none ring-2 ring-terracotta-400 ring-offset-2 ring-offset-ivory;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .c-btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-full text-sm font-semibold
+      transition-all duration-150 focus-visible:outline-none active:scale-[0.97]
+      disabled:pointer-events-none disabled:opacity-50;
+  }
+  .c-btn-primary {
+    @apply c-btn bg-espresso-700 text-ivory hover:bg-espresso-600 shadow-sm;
+  }
+  .c-btn-accent {
+    @apply c-btn bg-terracotta-500 text-white hover:bg-terracotta-600 shadow-sm;
+  }
+  .c-btn-outline {
+    @apply c-btn border border-sand bg-white/70 text-espresso-700 hover:border-espresso-300 hover:bg-white;
+  }
+  .c-btn-ghost {
+    @apply c-btn text-espresso-600 hover:bg-cream;
+  }
+
+  /* Surfaces */
+  .c-surface {
+    @apply rounded-2xl border border-sand bg-white shadow-cafe;
+  }
+  .c-field {
+    @apply w-full rounded-xl border border-sand bg-white px-4 py-3 text-[15px] text-espresso-700
+      placeholder:text-stone/70 transition-colors
+      focus:border-terracotta-400 focus:ring-4 focus:ring-terracotta-500/10;
+  }
+  .c-label {
+    @apply mb-1.5 block text-sm font-semibold text-espresso-600;
+  }
+  .c-eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-terracotta-500;
+  }
+}
+
+/* Subtle skeleton shimmer for loading states (shared) */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  @apply relative overflow-hidden bg-ink-100;
+}
+.skeleton::after {
+  content: '';
+  @apply absolute inset-0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.4s infinite;
+}
+
+/* Warm skeleton used in the customer UI */
+.cafe-skeleton {
+  @apply relative overflow-hidden bg-cream;
+}
+.cafe-skeleton::after {
+  content: '';
+  @apply absolute inset-0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 1.5s infinite;
+}
+
+/* Hide scrollbars on horizontal chip rows while keeping scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Respect reduced-motion: disable non-essential animation + transitions */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PRINT — show only the receipt (.print-receipt) when printing.
+   On screen the receipt is parked off-screen; on print everything else is
+   hidden and the receipt is brought to the top-left. Works regardless of
+   where the receipt sits in the DOM (admin layout chrome included).
+   ───────────────────────────────────────────────────────────────────────── */
+.print-receipt {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 302px; /* ~80mm thermal width */
+}
+
+@media print {
+  html, body {
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible !important;
+  }
+  .print-receipt {
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    padding: 0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    margin: 8mm;
+  }
+}
