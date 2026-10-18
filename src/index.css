@@ -19,37 +19,117 @@
 }
 
 @layer components {
-  /* ── Shared admin component classes (unchanged) ───────────────────────── */
+  /* ──────────────────────────────────────────────────────────────────────
+     ADMIN DESIGN SYSTEM
+     Palette (Vilasa brand): primary text #30231F (espresso), page bg #FAF7F2
+     (ivory), accent #B95538 (terracotta), secondary text #766D66 (stone),
+     borders #E9E1D8 (sand). These classes are used only by the admin panel.
+     Touch targets are >= 44px high for comfortable one-handed mobile use.
+     ────────────────────────────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold
       transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none;
   }
+  .btn-sm {
+    @apply min-h-[38px] gap-1.5 rounded-lg px-3 text-[13px];
+  }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+    @apply btn bg-espresso-700 text-white hover:bg-espresso-600 active:bg-espresso-800;
+  }
+  .btn-accent {
+    @apply btn bg-terracotta-500 text-white hover:bg-terracotta-600 active:bg-terracotta-700;
   }
   .btn-secondary {
-    @apply btn border border-ink-200 bg-white text-ink-800 hover:bg-ink-50;
+    @apply btn border border-sand bg-white text-espresso-700 hover:bg-cream active:bg-sand/60;
   }
   .btn-ghost {
-    @apply btn text-ink-700 hover:bg-ink-100;
+    @apply btn text-stone hover:bg-cream active:bg-sand/60;
   }
   .btn-danger {
-    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50;
+    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50 active:bg-red-100;
   }
   .input {
-    @apply w-full rounded-lg border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-900
-      placeholder:text-ink-400 focus:border-brand-400 focus:ring-2 focus:ring-brand-100;
+    @apply min-h-[44px] w-full rounded-xl border border-sand bg-white px-3.5 py-2.5 text-[15px] text-espresso-700
+      placeholder:text-stone/60 transition-colors
+      focus:border-terracotta-400 focus:ring-2 focus:ring-terracotta-500/15;
   }
   .label {
-    @apply mb-1.5 block text-sm font-medium text-ink-700;
+    @apply mb-1.5 block text-sm font-semibold text-espresso-600;
   }
   .card {
-    @apply rounded-xl border border-ink-200/70 bg-white shadow-card;
+    @apply rounded-2xl border border-sand bg-white shadow-card;
   }
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  /* Status badge variants (never rely on colour alone — always paired text) */
+  .badge-success { @apply bg-sage-100 text-sage-700; }
+  .badge-warn    { @apply bg-amber-100 text-amber-800; }
+  .badge-danger  { @apply bg-red-100 text-red-700; }
+  .badge-muted   { @apply bg-cream text-stone; }
+  .badge-accent  { @apply bg-terracotta-100 text-terracotta-700; }
+
+  /* Field label eyebrow used for grouped form sections */
+  .admin-section-title {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-stone;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ADMIN SHELL — root scope for the admin panel. Defines safe-area aware
+   spacing + the fixed bottom-nav height so content and page-level fixed bars
+   can offset themselves consistently.
+   ────────────────────────────────────────────────────────────────────────── */
+.admin {
+  --admin-nav-h: 4rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+  @apply bg-ivory text-espresso-700;
+}
+
+/* Space reserved under scrolling content so the fixed bottom nav (mobile)
+   never covers the last row of content or action buttons. */
+.admin-main-pad {
+  padding-bottom: calc(var(--admin-nav-h) + var(--safe-bottom) + 1.25rem);
+}
+@media (min-width: 1024px) {
+  .admin-main-pad {
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* A page-level fixed action bar that must sit directly above the bottom nav. */
+.admin-above-nav {
+  bottom: calc(var(--admin-nav-h) + var(--safe-bottom));
+}
+@media (min-width: 1024px) {
+  .admin-above-nav {
+    bottom: 0;
+  }
+}
+
+/* Fixed bottom navigation — respects the safe-area inset on notched phones. */
+.admin-bottom-nav {
+  padding-bottom: var(--safe-bottom);
+}
+
+/* ── Accessible toggle switch (products / coupons / banners / status) ──────── */
+.switch {
+  @apply relative inline-flex shrink-0 cursor-pointer items-center rounded-full border
+    transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2
+    focus-visible:ring-terracotta-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white
+    disabled:cursor-not-allowed disabled:opacity-60;
+  height: 28px;
+  width: 48px;
+}
+.switch-on  { @apply border-sage-500 bg-sage-500; }
+.switch-off { @apply border-sand bg-cream; }
+.switch-knob {
+  @apply pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white
+    shadow transition-transform duration-200;
+}
+.switch-on  .switch-knob { transform: translate(22px, -50%); }
+.switch-off .switch-knob { transform: translate(0, -50%); }
 
 /* ─────────────────────────────────────────────────────────────────────────
    CUSTOMER UI — scoped under .cafe so it never affects the admin panel.

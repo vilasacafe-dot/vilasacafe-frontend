@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Phone, GraduationCap } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { useAdminOrdersRealtime } from '../../hooks/useAdminOrdersRealtime.js';
 import { useToast } from '../../context/ToastContext.jsx';
-import { formatINR, formatTime, formatDateTime } from '../../lib/format.js';
+import { useConfirm } from '../../context/ConfirmContext.jsx';
+import { formatINR, formatDateTime } from '../../lib/format.js';
 import { playChime } from '../../lib/sound.js';
 import EmptyState from '../../components/EmptyState.jsx';
 import Spinner from '../../components/Spinner.jsx';
@@ -27,6 +29,7 @@ const NEXT_ACTIONS = {
 
 export default function AdminOrders() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [orders,    setOrders]   = useState([]);
   const [loading,   setLoading]  = useState(true);
   const [tab,       setTab]      = useState('PLACED');
@@ -66,6 +69,16 @@ export default function AdminOrders() {
   useAdminOrdersRealtime({ onInsert, onUpdate });
 
   async function changeStatus(id, status) {
+    if (status === 'CANCELLED') {
+      const ok = await confirm({
+        title: 'Cancel this order?',
+        message: 'This marks the order as cancelled. It cannot be undone.',
+        confirmLabel: 'Cancel order',
+        cancelLabel: 'Keep order',
+        danger: true,
+      });
+      if (!ok) return;
+    }
     setBusyId(id);
     try {
       const { order } = await api.admin.changeStatus(id, status);
@@ -87,34 +100,34 @@ export default function AdminOrders() {
   const visible = orders.filter((o) => o.order_status === tab);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-ink-900">Orders</h1>
-        <span className="flex items-center gap-2 text-xs font-medium text-green-700">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+        <h1 className="text-xl font-bold text-espresso-700">Orders</h1>
+        <span className="flex items-center gap-2 text-xs font-semibold text-sage-700">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-sage-500" />
           Live
         </span>
       </div>
 
       {/* Status tabs — horizontally scrollable on mobile */}
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
         <div className="flex gap-2 pb-1">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+              className={`min-h-[40px] whitespace-nowrap rounded-full px-4 text-sm font-semibold transition-colors ${
                 tab === t.key
-                  ? 'bg-brand-600 text-white'
-                  : 'border border-ink-200 bg-white text-ink-700 hover:bg-ink-50'
+                  ? 'bg-espresso-700 text-white'
+                  : 'border border-sand bg-white text-espresso-600 hover:bg-cream'
               }`}
             >
               {t.label}
               {counts[t.key] > 0 && (
                 <span
-                  className={`ml-2 rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                    tab === t.key ? 'bg-white/25' : 'bg-ink-100 text-ink-600'
+                  className={`ml-2 rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    tab === t.key ? 'bg-white/25' : 'bg-cream text-stone'
                   }`}
                 >
                   {counts[t.key]}
@@ -127,12 +140,11 @@ export default function AdminOrders() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <Spinner className="h-7 w-7 text-brand-600" />
+          <Spinner className="h-7 w-7 text-terracotta-500" />
         </div>
       ) : visible.length === 0 ? (
         <EmptyState title="Nothing here" message="No orders in this stage right now." />
       ) : (
-        /* Single-column on mobile, 2-col on md+ */
         <div className="grid gap-4 md:grid-cols-2">
           {visible.map((o) => (
             <OrderCard
@@ -156,61 +168,63 @@ function OrderCard({ order, busy, flash, onAction }) {
   return (
     <div
       className={`card overflow-hidden transition-shadow ${
-        flash ? 'ring-2 ring-brand-400 shadow-soft' : ''
+        flash ? 'ring-2 ring-terracotta-400 shadow-soft' : ''
       }`}
     >
-      {/* ── Top bar: order number + time + total ── */}
-      <div className="flex items-start justify-between gap-2 border-b border-ink-100 p-4">
+      {/* Top bar: order number + time + total */}
+      <div className="flex items-start justify-between gap-2 border-b border-sand p-4">
         <div className="min-w-0">
-          <p className="text-lg font-bold text-ink-900">{order.order_number}</p>
-          <p className="text-xs text-ink-400">{formatDateTime(order.created_at)}</p>
+          <p className="text-lg font-bold text-espresso-700">{order.order_number}</p>
+          <p className="text-xs text-stone">{formatDateTime(order.created_at)}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-lg font-bold text-ink-900">{formatINR(order.total)}</p>
-          <p className="text-xs font-medium text-ink-400">
+          <p className="text-lg font-bold text-espresso-700">{formatINR(order.total)}</p>
+          <p className="text-xs font-semibold text-stone">
             {order.payment_status === 'PAID' ? '✓ Paid' : 'COD · Pending'}
           </p>
         </div>
       </div>
 
       <div className="space-y-3 p-4">
-        {/* ── Customer info ── */}
-        <div className="rounded-lg bg-ink-50 px-3 py-2.5 text-sm">
-          <p className="font-semibold text-ink-800">{order.customer_name}</p>
-          <p className="mt-0.5 text-ink-500">
-            +91 {order.phone}
+        {/* Customer info */}
+        <div className="rounded-xl bg-cream/60 px-3 py-2.5 text-sm">
+          <p className="font-semibold text-espresso-700 break-words">{order.customer_name}</p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-stone">
+            <Phone className="h-3.5 w-3.5 shrink-0" /> +91 {order.phone}
           </p>
-          <p className="text-ink-500">{order.college}</p>
+          <p className="flex items-center gap-1.5 text-stone break-words">
+            <GraduationCap className="h-3.5 w-3.5 shrink-0" /> {order.college}
+          </p>
         </div>
 
-        {/* ── Order items ── */}
+        {/* Items */}
         <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-ink-400">Items</p>
+          <p className="admin-section-title mb-1">Items</p>
           <ul className="space-y-1">
             {(order.order_items || []).map((it) => (
-              <li key={it.id} className="flex justify-between text-sm">
-                <span className="text-ink-700">
+              <li key={it.id} className="flex justify-between gap-2 text-sm">
+                <span className="min-w-0 text-espresso-700">
                   {it.product_name}
-                  <span className="text-ink-400"> × {it.quantity}</span>
+                  <span className="text-stone"> × {it.quantity}</span>
                 </span>
-                <span className="tabular-nums text-ink-500">{formatINR(it.subtotal)}</span>
+                <span className="shrink-0 tabular-nums text-stone">{formatINR(it.subtotal)}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* ── Pricing breakdown ── */}
-        <div className="rounded-lg border border-ink-100 px-3 py-2.5 text-sm">
-          <div className="flex justify-between text-ink-600">
+        {/* Pricing breakdown */}
+        <div className="rounded-xl border border-sand px-3 py-2.5 text-sm">
+          <div className="flex justify-between text-stone">
             <span>Subtotal</span>
             <span className="tabular-nums">{formatINR(order.subtotal, true)}</span>
           </div>
           {hasDiscount && (
-            <div className="mt-1 flex justify-between text-green-700">
+            <div className="mt-1 flex justify-between text-sage-700">
               <span>
                 Discount
                 {order.coupon_code && (
-                  <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs font-semibold">
+                  <span className="ml-1 rounded bg-sage-100 px-1.5 py-0.5 text-xs font-bold">
                     {order.coupon_code}
                   </span>
                 )}
@@ -218,21 +232,21 @@ function OrderCard({ order, busy, flash, onAction }) {
               <span className="tabular-nums">− {formatINR(order.discount, true)}</span>
             </div>
           )}
-          <div className="mt-1.5 flex justify-between border-t border-ink-100 pt-1.5 font-bold text-ink-900">
+          <div className="mt-1.5 flex justify-between border-t border-sand pt-1.5 font-bold text-espresso-700">
             <span>Total</span>
             <span className="tabular-nums">{formatINR(order.total, true)}</span>
           </div>
         </div>
 
-        {/* ── Special notes ── */}
+        {/* Notes */}
         {order.notes && (
-          <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+          <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800 break-words">
             <span className="font-semibold">Note: </span>
             {order.notes}
           </div>
         )}
 
-        {/* ── Action buttons ── */}
+        {/* Actions */}
         {actions.length > 0 && (
           <div className="flex gap-2 pt-1">
             {actions.map((a) => (
@@ -242,7 +256,7 @@ function OrderCard({ order, busy, flash, onAction }) {
                 onClick={() => onAction(order.id, a.status)}
                 className={`${
                   a.primary ? 'btn-primary' : a.danger ? 'btn-danger' : 'btn-secondary'
-                } flex-1 text-sm`}
+                } flex-1`}
               >
                 {busy ? <Spinner className="h-4 w-4" /> : a.label}
               </button>

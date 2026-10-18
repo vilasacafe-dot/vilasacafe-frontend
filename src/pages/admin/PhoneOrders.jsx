@@ -125,7 +125,7 @@ export default function PhoneOrders() {
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <Spinner className="h-7 w-7 text-brand-600" />
+        <Spinner className="h-7 w-7 text-terracotta-500" />
       </div>
     );
   }
@@ -136,9 +136,9 @@ export default function PhoneOrders() {
         {/* ── PRIMARY: menu selection ── */}
         <section className="lg:col-span-3">
           {/* Sticky search + categories for fast picking */}
-          <div className="sticky top-[7.5rem] z-20 -mx-4 bg-ink-50/95 px-4 pb-2 pt-1 backdrop-blur sm:top-28">
+          <div className="sticky top-14 z-20 -mx-4 bg-ivory/95 px-4 pb-2 pt-1 backdrop-blur lg:top-0">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone" />
               <input
                 type="search"
                 className="input pl-9"
@@ -174,7 +174,7 @@ export default function PhoneOrders() {
                   <div
                     key={p.id}
                     className={`flex items-center justify-between gap-3 rounded-xl border bg-white p-3 transition-colors ${
-                      qty > 0 ? 'border-brand-300 ring-1 ring-brand-200' : 'border-ink-200'
+                      qty > 0 ? 'border-terracotta-300 ring-1 ring-terracotta-200' : 'border-sand'
                     }`}
                   >
                     <button
@@ -182,22 +182,22 @@ export default function PhoneOrders() {
                       onClick={() => inc(p)}
                       className="min-w-0 flex-1 text-left"
                     >
-                      <p className="truncate text-sm font-semibold text-ink-900">{p.name}</p>
-                      <p className="text-xs text-ink-500">{formatINR(p.price)}</p>
+                      <p className="truncate text-sm font-semibold text-espresso-700">{p.name}</p>
+                      <p className="text-xs text-stone">{formatINR(p.price)}</p>
                     </button>
                     {qty > 0 ? (
                       <div className="flex items-center gap-1">
                         <StepBtn onClick={() => dec(p)} aria-label="Decrease">
                           <Minus className="h-4 w-4" />
                         </StepBtn>
-                        <span className="w-7 text-center text-sm font-bold text-ink-900">{qty}</span>
+                        <span className="w-7 text-center text-sm font-bold text-espresso-700">{qty}</span>
                         <StepBtn onClick={() => inc(p)} aria-label="Increase">
                           <Plus className="h-4 w-4" />
                         </StepBtn>
                       </div>
                     ) : (
                       <button
-                        className="flex h-9 items-center gap-1 rounded-lg bg-brand-600 px-3 text-sm font-semibold text-white hover:bg-brand-700"
+                        className="flex h-9 items-center gap-1 rounded-lg bg-espresso-700 px-3 text-sm font-semibold text-white hover:bg-espresso-600"
                         onClick={() => inc(p)}
                       >
                         <Plus className="h-4 w-4" /> Add
@@ -212,7 +212,7 @@ export default function PhoneOrders() {
 
         {/* ── SECONDARY: summary → customer dropdown → print ── */}
         <aside className="lg:col-span-2">
-          <div className="card p-4 lg:sticky lg:top-28">
+          <div className="card p-4 lg:sticky lg:top-5">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-ink-500">
                 <ShoppingBag className="h-4 w-4" /> Order
@@ -330,18 +330,18 @@ export default function PhoneOrders() {
         </aside>
       </div>
 
-      {/* Mobile sticky print bar */}
-      <div className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-ink-200 bg-white p-3 lg:hidden">
+      {/* Mobile sticky print bar — sits directly above the bottom nav */}
+      <div className="no-print admin-above-nav fixed inset-x-0 z-30 border-t border-sand bg-white p-3 lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="text-sm">
-            <p className="font-semibold text-ink-900">
+            <p className="font-semibold text-espresso-700">
               {itemCount} item{itemCount === 1 ? '' : 's'} · {formatINR(total)}
             </p>
             {itemCount > 0 && !college && (
               <p className="text-xs text-amber-600">Add college in customer details</p>
             )}
           </div>
-          <button className="btn-primary px-5 py-2.5" disabled={itemCount === 0} onClick={handlePrint}>
+          <button className="btn-primary px-5" disabled={itemCount === 0} onClick={handlePrint}>
             <Printer className="h-4 w-4" /> Print
           </button>
         </div>
@@ -357,8 +357,8 @@ function CatChip({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-        active ? 'bg-brand-600 text-white' : 'border border-ink-200 bg-white text-ink-700 hover:border-brand-300'
+      className={`min-h-[38px] whitespace-nowrap rounded-full px-4 text-sm font-semibold transition-colors ${
+        active ? 'bg-espresso-700 text-white' : 'border border-sand bg-white text-espresso-600 hover:bg-cream'
       }`}
     >
       {label}
