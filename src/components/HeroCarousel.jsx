@@ -41,7 +41,7 @@ export default function HeroCarousel({ banners = [] }) {
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl bg-cream shadow-cafe"
+      className="relative overflow-hidden rounded-none bg-cream shadow-cafe sm:rounded-3xl"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={onTouchStart}
@@ -56,7 +56,7 @@ export default function HeroCarousel({ banners = [] }) {
       >
         {banners.map((b, i) => {
           const content = (
-            <div className="relative aspect-[16/9] w-full sm:aspect-[21/8]">
+            <div className="relative aspect-[4/3] w-full sm:aspect-[21/8]">
               <img
                 src={b.image_url}
                 alt={b.title || 'Vilasa Cafe promotion'}

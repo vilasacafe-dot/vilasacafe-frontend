@@ -235,7 +235,7 @@ function ProductRow({ product: p, categoryName, pending, onToggle, onEdit, onDel
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <li className="card overflow-hidden">
+    <li className="card">
       <div className="flex gap-3 p-3">
         <ProductImage src={p.image_url} alt={p.name} className="h-16 w-16 shrink-0 rounded-xl" bgClass="bg-cream" />
         <div className="min-w-0 flex-1">

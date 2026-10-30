@@ -8,15 +8,14 @@ import ProductCard from '../../components/ProductCard.jsx';
 import ProductGridSkeleton from '../../components/ProductGridSkeleton.jsx';
 import ClosedNotice from '../../components/ClosedNotice.jsx';
 import BottomCartBar from '../../components/BottomCartBar.jsx';
-import Button from '../../components/ui/Button.jsx';
 
 export default function Home() {
   const location = useLocation();
   const { isOpen, closedMessage, loading: statusLoading } = useRestaurantStatus();
-  const [banners, setBanners] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [banners, setBanners]     = useState([]);
+  const [products, setProducts]   = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]     = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,43 +33,23 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load, location.key]);
+  useEffect(() => { load(); }, [load, location.key]);
 
   const featured = products.filter((p) => p.is_featured && p.is_available).slice(0, 8);
-  const popular = products.slice(0, 8);
+  const popular  = products.slice(0, 8);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {!statusLoading && !isOpen && <ClosedNotice message={closedMessage} />}
 
-      {/* Editorial intro */}
-      <section className="animate-fade-in">
-        <p className="c-eyebrow">Fresh from the campus kitchen</p>
-        <h1 className="mt-2 max-w-2xl font-serif text-[2rem] leading-[1.08] text-espresso-700 sm:text-5xl">
-          Comfort food, made with care and delivered to your campus.
-        </h1>
-        <p className="mt-3 max-w-md text-[15px] leading-relaxed text-stone">
-          Hand-picked dishes from Vilasa Cafe. Browse the menu, build your order, and
-          pay cash on delivery across SRM AP, VIT AP and Amrita AP.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Button to="/menu" size="lg" rightIcon={<ArrowRight size={18} />}>
-            Explore the menu
-          </Button>
-          {categories.length > 0 && (
-            <Button to={`/menu?category=${categories[0].slug}`} variant="outline" size="lg">
-              {categories[0].name}
-            </Button>
-          )}
+      {/* ── Hero carousel — full-bleed on mobile ─────────────────────── */}
+      {banners.length > 0 && (
+        <div className="-mx-4 sm:mx-0">
+          <HeroCarousel banners={banners} />
         </div>
-      </section>
+      )}
 
-      {/* Restaurant-managed promotional banners */}
-      {banners.length > 0 && <HeroCarousel banners={banners} />}
-
-      {/* Browse by category */}
+      {/* ── Browse by category ────────────────────────────────────────── */}
       {categories.length > 0 && (
         <section>
           <SectionHeading title="Browse by category" />
@@ -88,7 +67,11 @@ export default function Home() {
                   {c.name}
                 </span>
                 <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-terracotta-500">
-                  View <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                  View{' '}
+                  <ArrowRight
+                    size={13}
+                    className="transition-transform group-hover:translate-x-0.5"
+                  />
                 </span>
               </Link>
             ))}
@@ -96,7 +79,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Featured / chef's picks */}
+      {/* ── Today's favourites (featured products) ───────────────────── */}
       {!loading && featured.length > 0 && (
         <section>
           <SectionHeading title="Today's favourites" to="/menu" linkLabel="Full menu" />
@@ -110,7 +93,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* Menu preview */}
+      {/* ── From the menu ─────────────────────────────────────────────── */}
       <section>
         <SectionHeading title="From the menu" to="/menu" linkLabel="See all" />
         {loading ? (

@@ -106,6 +106,10 @@ export default {
           from: { opacity: '0', transform: 'translateY(12px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'slide-in-right': {
+          from: { opacity: '0', transform: 'translateX(100%)' },
+          to:   { opacity: '1', transform: 'translateX(0)' },
+        },
         'slide-up-bar': {
           from: { opacity: '0', transform: 'translateY(100%)' },
           to: { opacity: '1', transform: 'translateY(0)' },
@@ -124,6 +128,7 @@ export default {
       animation: {
         'fade-in': 'fade-in 0.3s ease-out both',
         'slide-up': 'slide-up 0.35s cubic-bezier(0.22,1,0.36,1) both',
+        'slide-in-right': 'slide-in-right 0.28s cubic-bezier(0.22,1,0.36,1) both',
         'slide-up-bar': 'slide-up-bar 0.3s cubic-bezier(0.22,1,0.36,1) both',
         pop: 'pop 0.3s ease-out',
         'check-pop': 'check-pop 0.45s cubic-bezier(0.22,1,0.36,1) both',
