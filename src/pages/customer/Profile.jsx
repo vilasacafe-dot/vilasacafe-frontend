@@ -8,6 +8,13 @@ import Button from '../../components/ui/Button.jsx';
 
 const COLLEGES = ['SRM UNIVERSITY AP', 'VIT AP', 'AMRITA AP'];
 
+// Human-readable campus labels
+const COLLEGE_LABELS = {
+  'SRM UNIVERSITY AP': 'SRM University AP',
+  'VIT AP': 'VIT AP',
+  'AMRITA AP': 'Amrita AP',
+};
+
 export default function Profile() {
   const { user, profile, complete, refreshProfile, signOut } = useAuth();
   const toast = useToast();
@@ -139,7 +146,7 @@ export default function Profile() {
 
         <div>
           <label className="c-label" htmlFor="college">
-            College
+            Campus
           </label>
           <select
             id="college"
@@ -147,11 +154,9 @@ export default function Profile() {
             value={form.college}
             onChange={(e) => setForm((f) => ({ ...f, college: e.target.value }))}
           >
-            <option value="">Select your college</option>
+            <option value="">Select your campus</option>
             {COLLEGES.map((c) => (
-              <option key={c} value={c} disabled={c === 'VIT AP'} className="disabled:text-stone/40">
-                {c === 'VIT AP' ? `${c} — coming soon` : c}
-              </option>
+              <option key={c} value={c}>{COLLEGE_LABELS[c]}</option>
             ))}
           </select>
           {errors.college && <p className="mt-1 text-xs text-red-600">{errors.college}</p>}

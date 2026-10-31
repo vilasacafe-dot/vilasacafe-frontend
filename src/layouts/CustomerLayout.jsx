@@ -7,14 +7,28 @@ import {
 import { useAuth } from '../context/AuthContext.jsx';
 import { useCart } from '../context/CartContext.jsx';
 
-/** Brand mark — text hidden on mobile, both icon + text on ≥sm */
+/** Brand mark — circular logo image + "Vilasa Cafe" text on all screen sizes */
 function Wordmark() {
   return (
     <Link to="/" className="flex items-center gap-2.5" aria-label="Vilasa Cafe home">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-espresso-700 font-serif text-xl leading-none text-ivory">
+      <img
+        src="/logo.png"
+        alt="Vilasa"
+        className="h-9 w-9 shrink-0 rounded-full object-cover"
+        onError={(e) => {
+          // fallback to the styled "V" if logo.png is missing
+          e.currentTarget.style.display = 'none';
+          e.currentTarget.nextSibling.style.display = 'flex';
+        }}
+      />
+      {/* Hidden fallback — shown only if logo.png fails to load */}
+      <span
+        style={{ display: 'none' }}
+        className="h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-espresso-700 font-serif text-xl leading-none text-ivory"
+      >
         V
       </span>
-      <span className="hidden font-serif text-[22px] leading-none text-espresso-700 sm:block">
+      <span className="font-serif text-[22px] leading-none text-espresso-700">
         Vilasa <span className="text-terracotta-500">Cafe</span>
       </span>
     </Link>

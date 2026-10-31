@@ -12,6 +12,13 @@ import ClosedNotice from '../../components/ClosedNotice.jsx';
 
 const COLLEGES = ['SRM UNIVERSITY AP', 'VIT AP', 'AMRITA AP'];
 
+// Human-readable campus labels
+const COLLEGE_LABELS = {
+  'SRM UNIVERSITY AP': 'SRM University AP',
+  'VIT AP': 'VIT AP',
+  'AMRITA AP': 'Amrita AP',
+};
+
 // ─── Inline profile editor ────────────────────────────────────────────────────
 function EditDetailsPanel({ profile, onSaved, onCancel }) {
   const toast = useToast();
@@ -84,16 +91,16 @@ function EditDetailsPanel({ profile, onSaved, onCancel }) {
       </div>
 
       <div>
-        <label className="c-label text-xs">College</label>
+        <label className="c-label text-xs">Campus</label>
         <select
           className="c-field"
           value={form.college}
           onChange={(e) => setForm((f) => ({ ...f, college: e.target.value }))}
         >
-          <option value="">Select college</option>
+          <option value="">Select campus</option>
           {COLLEGES.map((c) => (
-            <option key={c} value={c} disabled={c === 'VIT AP'} className="disabled:text-stone/40">
-              {c === 'VIT AP' ? `${c} — coming soon` : c}
+            <option key={c} value={c}>
+              {COLLEGE_LABELS[c]}
             </option>
           ))}
         </select>
@@ -229,7 +236,7 @@ export default function Checkout() {
               <dl className="mt-3 space-y-2.5 text-sm">
                 <Row label="Name" value={profile.full_name} />
                 <Row label="Phone" value={`+91 ${profile.phone}`} />
-                <Row label="College" value={profile.college} />
+                <Row label="Campus" value={profile.college} />
               </dl>
             )}
           </section>
