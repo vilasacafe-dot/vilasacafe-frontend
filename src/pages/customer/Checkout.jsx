@@ -10,13 +10,14 @@ import { formatINR } from '../../lib/format.js';
 import Button from '../../components/ui/Button.jsx';
 import ClosedNotice from '../../components/ClosedNotice.jsx';
 
-const COLLEGES = ['SRM UNIVERSITY AP', 'VIT AP', 'AMRITA AP'];
+const COLLEGES = ['SRM UNIVERSITY AP', 'VIT AP', 'AMRITA AP', 'RESTAURANT PICKUP'];
 
-// Human-readable campus labels
+// Human-readable labels shown in the dropdown
 const COLLEGE_LABELS = {
-  'SRM UNIVERSITY AP': 'SRM University AP',
-  'VIT AP': 'VIT AP',
-  'AMRITA AP': 'Amrita AP',
+  'SRM UNIVERSITY AP': 'SRM University AP — Delivery',
+  'VIT AP':            'VIT AP — Delivery',
+  'AMRITA AP':         'Amrita AP — Delivery',
+  'RESTAURANT PICKUP': 'Restaurant Pickup',
 };
 
 // ─── Inline profile editor ────────────────────────────────────────────────────
@@ -97,12 +98,15 @@ function EditDetailsPanel({ profile, onSaved, onCancel }) {
           value={form.college}
           onChange={(e) => setForm((f) => ({ ...f, college: e.target.value }))}
         >
-          <option value="">Select campus</option>
-          {COLLEGES.map((c) => (
-            <option key={c} value={c}>
-              {COLLEGE_LABELS[c]}
-            </option>
-          ))}
+          <option value="">Select delivery campus or pickup</option>
+          <optgroup label="Campus Delivery">
+            <option value="SRM UNIVERSITY AP">SRM University AP</option>
+            <option value="VIT AP">VIT AP</option>
+            <option value="AMRITA AP">Amrita AP</option>
+          </optgroup>
+          <optgroup label="Self Pickup">
+            <option value="RESTAURANT PICKUP">Restaurant Pickup</option>
+          </optgroup>
         </select>
         {errors.college && <p className="mt-1 text-xs text-red-600">{errors.college}</p>}
       </div>
