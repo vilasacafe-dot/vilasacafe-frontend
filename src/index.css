@@ -122,8 +122,8 @@
   height: 28px;
   width: 48px;
 }
-.switch-on  { @apply border-sage-500 bg-sage-500; }
-.switch-off { @apply border-sand bg-cream; }
+.switch-on  { @apply border-green-500 bg-green-500; }
+.switch-off { @apply border-red-400 bg-red-400; }
 .switch-knob {
   @apply pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white
     shadow transition-transform duration-200;

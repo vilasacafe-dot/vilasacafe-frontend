@@ -294,12 +294,15 @@ export default function PhoneOrders() {
                       <GraduationCap className="h-3.5 w-3.5" /> College
                     </label>
                     <select className="input" value={college} onChange={(e) => setCollege(e.target.value)}>
-                      <option value="">Select college</option>
-                      {COLLEGES.map((c) => (
-                        <option key={c} value={c} disabled={c === 'VIT AP'}>
-                          {c === 'VIT AP' ? `${c} — coming soon` : c}
-                        </option>
-                      ))}
+                      <option value="">Select campus or pickup</option>
+                      <optgroup label="Campus Delivery">
+                        <option value="SRM UNIVERSITY AP">SRM University AP</option>
+                        <option value="VIT AP">VIT AP</option>
+                        <option value="AMRITA AP">Amrita AP</option>
+                      </optgroup>
+                      <optgroup label="Self Pickup">
+                        <option value="TAKEAWAY">Takeaway</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div>

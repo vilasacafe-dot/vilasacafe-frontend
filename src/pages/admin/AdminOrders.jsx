@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Phone, GraduationCap } from 'lucide-react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { Phone, GraduationCap, Printer } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { useAdminOrdersRealtime } from '../../hooks/useAdminOrdersRealtime.js';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -30,11 +30,13 @@ const NEXT_ACTIONS = {
 export default function AdminOrders() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [orders,    setOrders]   = useState([]);
-  const [loading,   setLoading]  = useState(true);
-  const [tab,       setTab]      = useState('PLACED');
-  const [busyId,    setBusyId]   = useState(null);
-  const [flashIds,  setFlashIds] = useState(() => new Set());
+  const [orders,       setOrders]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [tab,          setTab]          = useState('PLACED');
+  const [busyId,       setBusyId]       = useState(null);
+  const [flashIds,     setFlashIds]     = useState(() => new Set());
+  const [printingOrder, setPrintingOrder] = useState(null);
+  const afterPrintRef = useRef(null);
 
   useEffect(() => {
     let mounted = true;
@@ -90,6 +92,20 @@ export default function AdminOrders() {
     }
   }
 
+  function handlePrint(order) {
+    setPrintingOrder(order);
+    // Clean up after print dialog closes
+    if (afterPrintRef.current) {
+      window.removeEventListener('afterprint', afterPrintRef.current);
+    }
+    afterPrintRef.current = () => {
+      setPrintingOrder(null);
+      window.removeEventListener('afterprint', afterPrintRef.current);
+    };
+    window.addEventListener('afterprint', afterPrintRef.current);
+    setTimeout(() => window.print(), 80);
+  }
+
   const counts = useMemo(() => {
     const m = {};
     for (const t of TABS) m[t.key] = 0;
@@ -100,68 +116,74 @@ export default function AdminOrders() {
   const visible = orders.filter((o) => o.order_status === tab);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-espresso-700">Orders</h1>
-        <span className="flex items-center gap-2 text-xs font-semibold text-sage-700">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-sage-500" />
-          Live
-        </span>
+    <>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-espresso-700">Orders</h1>
+          <span className="flex items-center gap-2 text-xs font-semibold text-sage-700">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-sage-500" />
+            Live
+          </span>
+        </div>
+
+        {/* Status tabs */}
+        <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
+          <div className="flex gap-2 pb-1">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`min-h-[40px] whitespace-nowrap rounded-full px-4 text-sm font-semibold transition-colors ${
+                  tab === t.key
+                    ? 'bg-espresso-700 text-white'
+                    : 'border border-sand bg-white text-espresso-600 hover:bg-cream'
+                }`}
+              >
+                {t.label}
+                {counts[t.key] > 0 && (
+                  <span
+                    className={`ml-2 rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                      tab === t.key ? 'bg-white/25' : 'bg-cream text-stone'
+                    }`}
+                  >
+                    {counts[t.key]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Spinner className="h-7 w-7 text-terracotta-500" />
+          </div>
+        ) : visible.length === 0 ? (
+          <EmptyState title="Nothing here" message="No orders in this stage right now." />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {visible.map((o) => (
+              <OrderCard
+                key={o.id}
+                order={o}
+                busy={busyId === o.id}
+                flash={flashIds.has(o.id)}
+                onAction={changeStatus}
+                onPrint={handlePrint}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Status tabs — horizontally scrollable on mobile */}
-      <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:mx-0 sm:px-0">
-        <div className="flex gap-2 pb-1">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`min-h-[40px] whitespace-nowrap rounded-full px-4 text-sm font-semibold transition-colors ${
-                tab === t.key
-                  ? 'bg-espresso-700 text-white'
-                  : 'border border-sand bg-white text-espresso-600 hover:bg-cream'
-              }`}
-            >
-              {t.label}
-              {counts[t.key] > 0 && (
-                <span
-                  className={`ml-2 rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                    tab === t.key ? 'bg-white/25' : 'bg-cream text-stone'
-                  }`}
-                >
-                  {counts[t.key]}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Spinner className="h-7 w-7 text-terracotta-500" />
-        </div>
-      ) : visible.length === 0 ? (
-        <EmptyState title="Nothing here" message="No orders in this stage right now." />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {visible.map((o) => (
-            <OrderCard
-              key={o.id}
-              order={o}
-              busy={busyId === o.id}
-              flash={flashIds.has(o.id)}
-              onAction={changeStatus}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      {/* Hidden receipt — visible only during window.print() */}
+      {printingOrder && <WebOrderReceipt order={printingOrder} />}
+    </>
   );
 }
 
-function OrderCard({ order, busy, flash, onAction }) {
+function OrderCard({ order, busy, flash, onAction, onPrint }) {
   const actions = NEXT_ACTIONS[order.order_status] || [];
   const hasDiscount = Number(order.discount) > 0;
 
@@ -171,7 +193,7 @@ function OrderCard({ order, busy, flash, onAction }) {
         flash ? 'ring-2 ring-terracotta-400 shadow-soft' : ''
       }`}
     >
-      {/* Top bar: order number + time + total */}
+      {/* Top bar */}
       <div className="flex items-start justify-between gap-2 border-b border-sand p-4">
         <div className="min-w-0">
           <p className="text-lg font-bold text-espresso-700">{order.order_number}</p>
@@ -213,7 +235,7 @@ function OrderCard({ order, busy, flash, onAction }) {
           </ul>
         </div>
 
-        {/* Pricing breakdown */}
+        {/* Pricing */}
         <div className="rounded-xl border border-sand px-3 py-2.5 text-sm">
           <div className="flex justify-between text-stone">
             <span>Subtotal</span>
@@ -246,23 +268,115 @@ function OrderCard({ order, busy, flash, onAction }) {
           </div>
         )}
 
-        {/* Actions */}
-        {actions.length > 0 && (
-          <div className="flex gap-2 pt-1">
-            {actions.map((a) => (
-              <button
-                key={a.status}
-                disabled={busy}
-                onClick={() => onAction(order.id, a.status)}
-                className={`${
-                  a.primary ? 'btn-primary' : a.danger ? 'btn-danger' : 'btn-secondary'
-                } flex-1`}
-              >
-                {busy ? <Spinner className="h-4 w-4" /> : a.label}
-              </button>
+        {/* Actions row — status buttons + print */}
+        <div className="flex gap-2 pt-1">
+          {actions.map((a) => (
+            <button
+              key={a.status}
+              disabled={busy}
+              onClick={() => onAction(order.id, a.status)}
+              className={`${
+                a.primary ? 'btn-primary' : a.danger ? 'btn-danger' : 'btn-secondary'
+              } flex-1`}
+            >
+              {busy ? <Spinner className="h-4 w-4" /> : a.label}
+            </button>
+          ))}
+          {/* Print button — always visible */}
+          <button
+            onClick={() => onPrint(order)}
+            className="btn-secondary flex h-[44px] w-[44px] shrink-0 items-center justify-center !p-0"
+            title="Print receipt"
+            aria-label="Print receipt"
+          >
+            <Printer className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Printable receipt for web orders ───────────────────────────────────────── */
+function WebOrderReceipt({ order }) {
+  const hasDiscount = Number(order.discount) > 0;
+  const isPickup = order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY';
+
+  return (
+    <div className="print-receipt bg-white text-black">
+      <div className="mx-auto max-w-[300px] p-2 font-mono text-[12px] leading-tight text-black">
+        {/* Header */}
+        <div className="text-center">
+          <p className="text-[18px] font-bold tracking-wide">VILASA CAFE</p>
+          <p className="text-[11px]">Website Order</p>
+          <p className="text-[11px]">{formatDateTime(order.created_at)}</p>
+        </div>
+
+        <div className="my-2 border-t border-dashed border-black" />
+
+        {/* Order number */}
+        <p className="text-center font-bold">#{order.order_number}</p>
+
+        <div className="my-2 border-t border-dashed border-black" />
+
+        {/* Customer */}
+        <p className="font-bold">{order.customer_name}</p>
+        {order.phone && <p>Phone: +91 {order.phone}</p>}
+        <p>{isPickup ? 'Pickup at restaurant' : `Campus: ${order.college}`}</p>
+
+        <div className="my-2 border-t border-dashed border-black" />
+
+        {/* Items */}
+        <table className="w-full">
+          <thead>
+            <tr className="text-left">
+              <th className="pb-1">Item</th>
+              <th className="pb-1 text-center">Qty</th>
+              <th className="pb-1 text-right">Amt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(order.order_items || []).map((it) => (
+              <tr key={it.id} className="align-top">
+                <td className="py-0.5 pr-1">{it.product_name}</td>
+                <td className="py-0.5 text-center">{it.quantity}</td>
+                <td className="py-0.5 text-right tabular-nums">{formatINR(it.subtotal)}</td>
+              </tr>
             ))}
-          </div>
+          </tbody>
+        </table>
+
+        <div className="my-2 border-t border-dashed border-black" />
+
+        {/* Totals */}
+        {hasDiscount && (
+          <>
+            <div className="flex justify-between text-[12px]">
+              <span>Subtotal</span>
+              <span className="tabular-nums">{formatINR(order.subtotal, true)}</span>
+            </div>
+            <div className="flex justify-between text-[12px]">
+              <span>Discount{order.coupon_code ? ` (${order.coupon_code})` : ''}</span>
+              <span className="tabular-nums">− {formatINR(order.discount, true)}</span>
+            </div>
+          </>
         )}
+        <div className="flex justify-between text-[14px] font-bold">
+          <span>TOTAL</span>
+          <span className="tabular-nums">{formatINR(order.total, true)}</span>
+        </div>
+        <p className="mt-1 text-[11px]">Payment: Cash on Delivery</p>
+
+        {/* Notes */}
+        {order.notes && (
+          <>
+            <div className="my-2 border-t border-dashed border-black" />
+            <p className="text-[11px]">Note: {order.notes}</p>
+          </>
+        )}
+
+        <div className="my-2 border-t border-dashed border-black" />
+        <p className="text-center text-[11px]">Thank you!</p>
       </div>
     </div>
   );

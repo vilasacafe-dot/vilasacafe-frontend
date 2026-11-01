@@ -72,7 +72,7 @@ export default function OrderTracking() {
           <h1 className="mt-0.5 font-serif text-3xl text-espresso-700">{order.order_number}</h1>
           <p className="mt-1 text-sm text-stone">Placed {formatDateTime(order.created_at)}</p>
         </div>
-        <OrderStatusBadge status={order.order_status} />
+        <OrderStatusBadge status={order.order_status} large />
       </div>
 
       <section className="c-surface mt-6 p-5">
@@ -119,7 +119,11 @@ export default function OrderTracking() {
       </section>
 
       <section className="c-surface mt-4 p-5 text-sm">
-        <h2 className="c-eyebrow mb-3">Delivery to</h2>
+        <h2 className="c-eyebrow mb-3">
+          {order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY'
+            ? 'Pickup details'
+            : 'Delivery to'}
+        </h2>
         <div className="space-y-2">
           <p className="font-semibold text-espresso-700">{order.customer_name}</p>
           <p className="flex items-center gap-2 text-stone">
@@ -128,7 +132,9 @@ export default function OrderTracking() {
           </p>
           <p className="flex items-center gap-2 text-stone">
             <MapPin size={14} className="text-terracotta-500" />
-            {order.college}
+            {order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY'
+              ? 'Pickup at restaurant'
+              : order.college}
           </p>
           {order.notes && (
             <p className="flex items-start gap-2 text-stone">
