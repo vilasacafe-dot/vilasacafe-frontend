@@ -1,37 +1,38 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
-  Plus,
-  Minus,
-  Printer,
-  Search,
-  Trash2,
-  Phone,
-  GraduationCap,
-  StickyNote,
-  ChevronDown,
-  ShoppingBag,
+  Plus, Minus, Printer, Search, Phone,
+  GraduationCap, StickyNote, ChevronDown, ShoppingBag,
 } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { formatINR, formatDateTime } from '../../lib/format.js';
 import Spinner from '../../components/Spinner.jsx';
 
-const COLLEGES = ['SRM UNIVERSITY AP', 'VIT AP', 'AMRITA AP'];
+function newIdempotencyKey() {
+  return (
+    (typeof crypto !== 'undefined' && crypto.randomUUID?.()) ||
+    `pk_${Date.now()}_${Math.random().toString(36).slice(2)}`
+  );
+}
 
 export default function PhoneOrders() {
   const toast = useToast();
   const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts]     = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [saving, setSaving]         = useState(false);
 
-  const [cart, setCart] = useState({}); // id -> { product, qty }
-  const [phone, setPhone] = useState('');
-  const [college, setCollege] = useState('');
-  const [note, setNote] = useState('');
-  const [search, setSearch] = useState('');
-  const [activeCat, setActiveCat] = useState('all');
-  const [printedAt, setPrintedAt] = useState(null);
+  const [cart, setCart]               = useState({});
+  const [phone, setPhone]             = useState('');
+  const [customerName, setCustomerName] = useState('');
+  const [college, setCollege]         = useState('');
+  const [note, setNote]               = useState('');
+  const [search, setSearch]           = useState('');
+  const [activeCat, setActiveCat]     = useState('all');
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [savedOrder, setSavedOrder]   = useState(null); // { order_id, order_number, total }
+
+  const idempotencyKey = useRef(newIdempotencyKey());
 
   useEffect(() => {
     let mounted = true;
@@ -43,9 +44,7 @@ export default function PhoneOrders() {
       })
       .catch((e) => mounted && toast.error(e.message))
       .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [toast]);
 
   const inc = useCallback((product) => {
@@ -70,9 +69,12 @@ export default function PhoneOrders() {
   const clearAll = () => {
     setCart({});
     setPhone('');
+    setCustomerName('');
     setCollege('');
     setNote('');
     setCustomerOpen(false);
+    setSavedOrder(null);
+    idempotencyKey.current = newIdempotencyKey(); // fresh key for next order
   };
 
   const lines = useMemo(
@@ -88,7 +90,7 @@ export default function PhoneOrders() {
   );
 
   const itemCount = lines.reduce((n, l) => n + l.qty, 0);
-  const total = lines.reduce((s, l) => s + l.total, 0);
+  const total     = lines.reduce((s, l) => s + l.total, 0);
 
   const visibleProducts = useMemo(() => {
     const activeIds = new Set(categories.map((c) => c.id));
@@ -106,20 +108,36 @@ export default function PhoneOrders() {
     return list;
   }, [products, categories, activeCat, search]);
 
-  const canPrint = itemCount > 0 && Boolean(college);
+  const canPrint = itemCount > 0 && Boolean(college) && !saving;
 
-  function handlePrint() {
+  async function handlePrint() {
     if (itemCount === 0) {
       toast.error('Add at least one item first.');
       return;
     }
     if (!college) {
       setCustomerOpen(true);
-      toast.error('Select a college before printing.');
+      toast.error('Select a campus or pickup option before printing.');
       return;
     }
-    setPrintedAt(new Date().toISOString());
-    setTimeout(() => window.print(), 60);
+
+    setSaving(true);
+    try {
+      const result = await api.admin.placePhoneOrder({
+        customer_name:   customerName.trim() || null,
+        phone:           phone.trim() || null,
+        college,
+        items: lines.map((l) => ({ product_id: l.id, quantity: l.qty })),
+        notes:           note.trim() || null,
+        idempotency_key: idempotencyKey.current,
+      });
+      setSavedOrder(result.order ?? result); // handle both {order:{...}} and flat response
+      setTimeout(() => window.print(), 80);
+    } catch (e) {
+      toast.error(e.message || 'Could not save order. Try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -133,9 +151,8 @@ export default function PhoneOrders() {
   return (
     <>
       <div className="no-print grid gap-5 pb-28 lg:grid-cols-5 lg:pb-6">
-        {/* ── PRIMARY: menu selection ── */}
+        {/* ── LEFT: menu ── */}
         <section className="lg:col-span-3">
-          {/* Sticky search + categories for fast picking */}
           <div className="sticky top-14 z-20 -mx-4 bg-ivory/95 px-4 pb-2 pt-1 backdrop-blur lg:top-0">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone" />
@@ -163,7 +180,6 @@ export default function PhoneOrders() {
             </div>
           </div>
 
-          {/* Product grid — big tap targets, quick add */}
           {visibleProducts.length === 0 ? (
             <p className="py-12 text-center text-sm text-ink-400">No dishes found.</p>
           ) : (
@@ -177,23 +193,15 @@ export default function PhoneOrders() {
                       qty > 0 ? 'border-terracotta-300 ring-1 ring-terracotta-200' : 'border-sand'
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => inc(p)}
-                      className="min-w-0 flex-1 text-left"
-                    >
+                    <button type="button" onClick={() => inc(p)} className="min-w-0 flex-1 text-left">
                       <p className="truncate text-sm font-semibold text-espresso-700">{p.name}</p>
                       <p className="text-xs text-stone">{formatINR(p.price)}</p>
                     </button>
                     {qty > 0 ? (
                       <div className="flex items-center gap-1">
-                        <StepBtn onClick={() => dec(p)} aria-label="Decrease">
-                          <Minus className="h-4 w-4" />
-                        </StepBtn>
+                        <StepBtn onClick={() => dec(p)} aria-label="Decrease"><Minus className="h-4 w-4" /></StepBtn>
                         <span className="w-7 text-center text-sm font-bold text-espresso-700">{qty}</span>
-                        <StepBtn onClick={() => inc(p)} aria-label="Increase">
-                          <Plus className="h-4 w-4" />
-                        </StepBtn>
+                        <StepBtn onClick={() => inc(p)} aria-label="Increase"><Plus className="h-4 w-4" /></StepBtn>
                       </div>
                     ) : (
                       <button
@@ -210,7 +218,7 @@ export default function PhoneOrders() {
           )}
         </section>
 
-        {/* ── SECONDARY: summary → customer dropdown → print ── */}
+        {/* ── RIGHT: summary + customer + print ── */}
         <aside className="lg:col-span-2">
           <div className="card p-4 lg:sticky lg:top-5">
             <div className="flex items-center justify-between">
@@ -247,7 +255,7 @@ export default function PhoneOrders() {
               </>
             )}
 
-            {/* Customer details — collapsible dropdown */}
+            {/* Customer details — collapsible */}
             <div className="mt-4 rounded-lg border border-ink-200">
               <button
                 type="button"
@@ -260,7 +268,7 @@ export default function PhoneOrders() {
                   {college ? (
                     <span className="ml-2 font-normal text-ink-500">· {college}</span>
                   ) : (
-                    <span className="ml-2 font-normal text-ink-400">optional</span>
+                    <span className="ml-2 font-normal text-red-400">required</span>
                   )}
                 </span>
                 <ChevronDown
@@ -270,15 +278,24 @@ export default function PhoneOrders() {
 
               {customerOpen && (
                 <div className="space-y-3 border-t border-ink-100 p-3">
+                  {/* Customer name */}
+                  <div>
+                    <label className="label">Name <span className="font-normal text-ink-400">(optional)</span></label>
+                    <input
+                      className="input"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      placeholder="Walk-in customer name"
+                    />
+                  </div>
+
+                  {/* Phone */}
                   <div>
                     <label className="label flex items-center gap-1.5">
-                      <Phone className="h-3.5 w-3.5" /> Phone{' '}
-                      <span className="font-normal text-ink-400">(optional)</span>
+                      <Phone className="h-3.5 w-3.5" /> Phone <span className="font-normal text-ink-400">(optional)</span>
                     </label>
                     <div className="flex">
-                      <span className="inline-flex items-center rounded-l-lg border border-r-0 border-ink-200 bg-ink-50 px-3 text-sm text-ink-500">
-                        +91
-                      </span>
+                      <span className="inline-flex items-center rounded-l-lg border border-r-0 border-ink-200 bg-ink-50 px-3 text-sm text-ink-500">+91</span>
                       <input
                         className="input rounded-l-none"
                         inputMode="numeric"
@@ -289,9 +306,11 @@ export default function PhoneOrders() {
                       />
                     </div>
                   </div>
+
+                  {/* Campus / Pickup — REQUIRED */}
                   <div>
                     <label className="label flex items-center gap-1.5">
-                      <GraduationCap className="h-3.5 w-3.5" /> College
+                      <GraduationCap className="h-3.5 w-3.5" /> Campus / Pickup <span className="text-red-500">*</span>
                     </label>
                     <select className="input" value={college} onChange={(e) => setCollege(e.target.value)}>
                       <option value="">Select campus or pickup</option>
@@ -302,20 +321,22 @@ export default function PhoneOrders() {
                       </optgroup>
                       <optgroup label="Self Pickup">
                         <option value="TAKEAWAY">Takeaway</option>
+                        <option value="RESTAURANT PICKUP">Restaurant Pickup</option>
                       </optgroup>
                     </select>
                   </div>
+
+                  {/* Note */}
                   <div>
                     <label className="label flex items-center gap-1.5">
-                      <StickyNote className="h-3.5 w-3.5" /> Note{' '}
-                      <span className="font-normal text-ink-400">(optional)</span>
+                      <StickyNote className="h-3.5 w-3.5" /> Note <span className="font-normal text-ink-400">(optional)</span>
                     </label>
                     <textarea
                       className="input min-h-[56px] resize-y"
                       maxLength={300}
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="e.g. Room number, landmark, less spicy…"
+                      placeholder="e.g. Room number, less spicy…"
                     />
                   </div>
                 </div>
@@ -324,16 +345,26 @@ export default function PhoneOrders() {
 
             <button
               className="btn-primary mt-4 hidden w-full py-3 lg:flex"
-              disabled={itemCount === 0}
+              disabled={!canPrint}
               onClick={handlePrint}
             >
-              <Printer className="h-4 w-4" /> Print ticket
+              {saving ? (
+                <><Spinner className="h-4 w-4" /> Saving…</>
+              ) : (
+                <><Printer className="h-4 w-4" /> Save &amp; Print ticket</>
+              )}
             </button>
+
+            {savedOrder && (
+              <p className="mt-2 text-center text-xs font-semibold text-sage-700">
+                ✓ Saved as {savedOrder.order_number}
+              </p>
+            )}
           </div>
         </aside>
       </div>
 
-      {/* Mobile sticky print bar — sits directly above the bottom nav */}
+      {/* Mobile sticky bar */}
       <div className="no-print admin-above-nav fixed inset-x-0 z-30 border-t border-sand bg-white p-3 lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <div className="text-sm">
@@ -341,17 +372,29 @@ export default function PhoneOrders() {
               {itemCount} item{itemCount === 1 ? '' : 's'} · {formatINR(total)}
             </p>
             {itemCount > 0 && !college && (
-              <p className="text-xs text-amber-600">Add college in customer details</p>
+              <p className="text-xs text-red-600">Select campus/pickup in customer details</p>
+            )}
+            {savedOrder && (
+              <p className="text-xs font-semibold text-sage-700">✓ {savedOrder.order_number}</p>
             )}
           </div>
-          <button className="btn-primary px-5" disabled={itemCount === 0} onClick={handlePrint}>
-            <Printer className="h-4 w-4" /> Print
+          <button className="btn-primary px-5" disabled={!canPrint} onClick={handlePrint}>
+            {saving ? <Spinner className="h-4 w-4" /> : <><Printer className="h-4 w-4" /> Print</>}
           </button>
         </div>
       </div>
 
-      {/* Printable receipt (hidden on screen) */}
-      <Receipt lines={lines} total={total} phone={phone} college={college} note={note} at={printedAt} />
+      {/* Printable receipt */}
+      <Receipt
+        lines={lines}
+        total={total}
+        customerName={customerName}
+        phone={phone}
+        college={college}
+        note={note}
+        orderNumber={savedOrder?.order_number}
+        at={savedOrder ? new Date().toISOString() : null}
+      />
     </>
   );
 }
@@ -380,21 +423,33 @@ function StepBtn({ children, ...rest }) {
   );
 }
 
-function Receipt({ lines, total, phone, college, note, at }) {
+function Receipt({ lines, total, customerName, phone, college, note, orderNumber, at }) {
   const when = at ? formatDateTime(at) : formatDateTime(new Date().toISOString());
+  const isPickup = college === 'TAKEAWAY' || college === 'RESTAURANT PICKUP';
+
   return (
     <div className="print-receipt bg-white text-black">
       <div className="mx-auto max-w-[300px] p-2 font-mono text-[12px] leading-tight text-black">
         <div className="text-center">
           <p className="text-[18px] font-bold tracking-wide">VILASA CAFE</p>
-          <p className="text-[11px]">Phone Order</p>
+          <p className="text-[11px]">Counter / Phone Order</p>
           <p className="text-[11px]">{when}</p>
         </div>
 
+        {orderNumber && (
+          <>
+            <div className="my-2 border-t border-dashed border-black" />
+            <p className="text-center text-[15px] font-bold">#{orderNumber}</p>
+          </>
+        )}
+
         <div className="my-2 border-t border-dashed border-black" />
 
+        {customerName && <p className="font-bold">{customerName}</p>}
         {phone && <p>Phone: +91 {phone}</p>}
-        {college && <p>College: {college}</p>}
+        {college && (
+          <p>{isPickup ? 'Pickup at restaurant' : `Campus: ${college}`}</p>
+        )}
 
         <div className="my-2 border-t border-dashed border-black" />
 

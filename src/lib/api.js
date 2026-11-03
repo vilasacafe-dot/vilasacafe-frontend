@@ -93,6 +93,8 @@ export const api = {
     changeStatus: (id, status) =>
       request(`/admin/orders/${id}/status`, { method: 'PUT', body: { status }, auth: true }),
     dashboard: () => request('/admin/dashboard/summary', { auth: true }),
+    placePhoneOrder: (d) =>
+      request('/admin/phone-orders', { method: 'POST', body: d, auth: true }),
 
     async uploadImage(file, kind = 'product') {
       const form = new FormData();

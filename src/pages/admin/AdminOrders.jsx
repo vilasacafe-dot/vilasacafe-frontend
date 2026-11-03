@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { Phone, GraduationCap, Printer } from 'lucide-react';
+import { Phone, GraduationCap, Printer, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { useAdminOrdersRealtime } from '../../hooks/useAdminOrdersRealtime.js';
 import { useToast } from '../../context/ToastContext.jsx';
@@ -19,23 +19,26 @@ const TABS = [
 ];
 
 const NEXT_ACTIONS = {
-  PLACED:           [{ status: 'ACCEPTED',         label: 'Accept',           primary: true  }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
-  ACCEPTED:         [{ status: 'PREPARING',         label: 'Start preparing',  primary: true  }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
-  PREPARING:        [{ status: 'OUT_FOR_DELIVERY',  label: 'Out for delivery', primary: true  }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
-  OUT_FOR_DELIVERY: [{ status: 'DELIVERED',         label: 'Mark delivered',   primary: true  }],
+  PLACED:           [{ status: 'ACCEPTED',        label: 'Accept',           primary: true }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
+  ACCEPTED:         [{ status: 'PREPARING',        label: 'Start preparing',  primary: true }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
+  PREPARING:        [{ status: 'OUT_FOR_DELIVERY', label: 'Out for delivery', primary: true }, { status: 'CANCELLED', label: 'Cancel', danger: true }],
+  OUT_FOR_DELIVERY: [{ status: 'DELIVERED',        label: 'Mark delivered',   primary: true }],
   DELIVERED:        [],
   CANCELLED:        [],
 };
 
 export default function AdminOrders() {
-  const toast = useToast();
+  const toast   = useToast();
   const confirm = useConfirm();
-  const [orders,       setOrders]       = useState([]);
-  const [loading,      setLoading]      = useState(true);
-  const [tab,          setTab]          = useState('PLACED');
-  const [busyId,       setBusyId]       = useState(null);
-  const [flashIds,     setFlashIds]     = useState(() => new Set());
+
+  const [orders,        setOrders]        = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [tab,           setTab]           = useState('PLACED');
+  const [busyId,        setBusyId]        = useState(null);
+  const [flashIds,      setFlashIds]      = useState(() => new Set());
   const [printingOrder, setPrintingOrder] = useState(null);
+  const [search,        setSearch]        = useState('');
+  const [sortDir,       setSortDir]       = useState('desc'); // 'desc' = newest first
   const afterPrintRef = useRef(null);
 
   useEffect(() => {
@@ -76,7 +79,7 @@ export default function AdminOrders() {
         title: 'Cancel this order?',
         message: 'This marks the order as cancelled. It cannot be undone.',
         confirmLabel: 'Cancel order',
-        cancelLabel: 'Keep order',
+        cancelLabel:  'Keep order',
         danger: true,
       });
       if (!ok) return;
@@ -94,10 +97,7 @@ export default function AdminOrders() {
 
   function handlePrint(order) {
     setPrintingOrder(order);
-    // Clean up after print dialog closes
-    if (afterPrintRef.current) {
-      window.removeEventListener('afterprint', afterPrintRef.current);
-    }
+    if (afterPrintRef.current) window.removeEventListener('afterprint', afterPrintRef.current);
     afterPrintRef.current = () => {
       setPrintingOrder(null);
       window.removeEventListener('afterprint', afterPrintRef.current);
@@ -113,7 +113,29 @@ export default function AdminOrders() {
     return m;
   }, [orders]);
 
-  const visible = orders.filter((o) => o.order_status === tab);
+  // Apply tab filter, then search, then sort
+  const visible = useMemo(() => {
+    let list = orders.filter((o) => o.order_status === tab);
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (o) =>
+          o.order_number?.toLowerCase().includes(q) ||
+          o.customer_name?.toLowerCase().includes(q) ||
+          o.phone?.includes(q) ||
+          o.college?.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort by created_at
+    list = [...list].sort((a, b) => {
+      const diff = new Date(b.created_at) - new Date(a.created_at);
+      return sortDir === 'desc' ? diff : -diff;
+    });
+
+    return list;
+  }, [orders, tab, search, sortDir]);
 
   return (
     <>
@@ -125,6 +147,32 @@ export default function AdminOrders() {
             <span className="h-2 w-2 animate-pulse rounded-full bg-sage-500" />
             Live
           </span>
+        </div>
+
+        {/* Search + Sort bar */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone" />
+            <input
+              type="search"
+              className="input pl-9"
+              placeholder="Search order #, name, phone, campus…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
+            className="btn-secondary flex h-[44px] w-[44px] shrink-0 items-center justify-center !p-0"
+            title={sortDir === 'desc' ? 'Newest first' : 'Oldest first'}
+            aria-label={sortDir === 'desc' ? 'Sort: newest first' : 'Sort: oldest first'}
+          >
+            {sortDir === 'desc' ? (
+              <ArrowDown className="h-4 w-4" />
+            ) : (
+              <ArrowUp className="h-4 w-4" />
+            )}
+          </button>
         </div>
 
         {/* Status tabs */}
@@ -160,7 +208,10 @@ export default function AdminOrders() {
             <Spinner className="h-7 w-7 text-terracotta-500" />
           </div>
         ) : visible.length === 0 ? (
-          <EmptyState title="Nothing here" message="No orders in this stage right now." />
+          <EmptyState
+            title={search ? 'No matches' : 'Nothing here'}
+            message={search ? 'Try a different search term.' : 'No orders in this stage right now.'}
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {visible.map((o) => (
@@ -177,15 +228,16 @@ export default function AdminOrders() {
         )}
       </div>
 
-      {/* Hidden receipt — visible only during window.print() */}
+      {/* Hidden receipt — rendered only during window.print() */}
       {printingOrder && <WebOrderReceipt order={printingOrder} />}
     </>
   );
 }
 
 function OrderCard({ order, busy, flash, onAction, onPrint }) {
-  const actions = NEXT_ACTIONS[order.order_status] || [];
+  const actions    = NEXT_ACTIONS[order.order_status] || [];
   const hasDiscount = Number(order.discount) > 0;
+  const isPhone    = order.source === 'PHONE';
 
   return (
     <div
@@ -196,7 +248,14 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
       {/* Top bar */}
       <div className="flex items-start justify-between gap-2 border-b border-sand p-4">
         <div className="min-w-0">
-          <p className="text-lg font-bold text-espresso-700">{order.order_number}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-lg font-bold text-espresso-700">{order.order_number}</p>
+            {isPhone && (
+              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                Phone
+              </span>
+            )}
+          </div>
           <p className="text-xs text-stone">{formatDateTime(order.created_at)}</p>
         </div>
         <div className="shrink-0 text-right">
@@ -208,14 +267,19 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
       </div>
 
       <div className="space-y-3 p-4">
-        {/* Customer info */}
+        {/* Customer */}
         <div className="rounded-xl bg-cream/60 px-3 py-2.5 text-sm">
           <p className="font-semibold text-espresso-700 break-words">{order.customer_name}</p>
-          <p className="mt-0.5 flex items-center gap-1.5 text-stone">
-            <Phone className="h-3.5 w-3.5 shrink-0" /> +91 {order.phone}
-          </p>
+          {order.phone && (
+            <p className="mt-0.5 flex items-center gap-1.5 text-stone">
+              <Phone className="h-3.5 w-3.5 shrink-0" /> +91 {order.phone}
+            </p>
+          )}
           <p className="flex items-center gap-1.5 text-stone break-words">
-            <GraduationCap className="h-3.5 w-3.5 shrink-0" /> {order.college}
+            <GraduationCap className="h-3.5 w-3.5 shrink-0" />
+            {order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY'
+              ? 'Pickup at restaurant'
+              : order.college}
           </p>
         </div>
 
@@ -226,8 +290,7 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
             {(order.order_items || []).map((it) => (
               <li key={it.id} className="flex justify-between gap-2 text-sm">
                 <span className="min-w-0 text-espresso-700">
-                  {it.product_name}
-                  <span className="text-stone"> × {it.quantity}</span>
+                  {it.product_name}<span className="text-stone"> × {it.quantity}</span>
                 </span>
                 <span className="shrink-0 tabular-nums text-stone">{formatINR(it.subtotal)}</span>
               </li>
@@ -263,12 +326,11 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
         {/* Notes */}
         {order.notes && (
           <div className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm text-amber-800 break-words">
-            <span className="font-semibold">Note: </span>
-            {order.notes}
+            <span className="font-semibold">Note: </span>{order.notes}
           </div>
         )}
 
-        {/* Actions row — status buttons + print */}
+        {/* Actions + Print */}
         <div className="flex gap-2 pt-1">
           {actions.map((a) => (
             <button
@@ -282,7 +344,6 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
               {busy ? <Spinner className="h-4 w-4" /> : a.label}
             </button>
           ))}
-          {/* Print button — always visible */}
           <button
             onClick={() => onPrint(order)}
             className="btn-secondary flex h-[44px] w-[44px] shrink-0 items-center justify-center !p-0"
@@ -297,36 +358,30 @@ function OrderCard({ order, busy, flash, onAction, onPrint }) {
   );
 }
 
-/* ── Printable receipt for web orders ───────────────────────────────────────── */
+/* ── Print receipt ───────────────────────────────────────────────────────── */
 function WebOrderReceipt({ order }) {
   const hasDiscount = Number(order.discount) > 0;
-  const isPickup = order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY';
+  const isPickup    = order.college === 'RESTAURANT PICKUP' || order.college === 'TAKEAWAY';
 
   return (
     <div className="print-receipt bg-white text-black">
       <div className="mx-auto max-w-[300px] p-2 font-mono text-[12px] leading-tight text-black">
-        {/* Header */}
         <div className="text-center">
           <p className="text-[18px] font-bold tracking-wide">VILASA CAFE</p>
-          <p className="text-[11px]">Website Order</p>
+          <p className="text-[11px]">{order.source === 'PHONE' ? 'Counter / Phone Order' : 'Website Order'}</p>
           <p className="text-[11px]">{formatDateTime(order.created_at)}</p>
         </div>
 
         <div className="my-2 border-t border-dashed border-black" />
-
-        {/* Order number */}
-        <p className="text-center font-bold">#{order.order_number}</p>
-
+        <p className="text-center text-[15px] font-bold">#{order.order_number}</p>
         <div className="my-2 border-t border-dashed border-black" />
 
-        {/* Customer */}
         <p className="font-bold">{order.customer_name}</p>
         {order.phone && <p>Phone: +91 {order.phone}</p>}
         <p>{isPickup ? 'Pickup at restaurant' : `Campus: ${order.college}`}</p>
 
         <div className="my-2 border-t border-dashed border-black" />
 
-        {/* Items */}
         <table className="w-full">
           <thead>
             <tr className="text-left">
@@ -348,7 +403,6 @@ function WebOrderReceipt({ order }) {
 
         <div className="my-2 border-t border-dashed border-black" />
 
-        {/* Totals */}
         {hasDiscount && (
           <>
             <div className="flex justify-between text-[12px]">
@@ -367,7 +421,6 @@ function WebOrderReceipt({ order }) {
         </div>
         <p className="mt-1 text-[11px]">Payment: Cash on Delivery</p>
 
-        {/* Notes */}
         {order.notes && (
           <>
             <div className="my-2 border-t border-dashed border-black" />
