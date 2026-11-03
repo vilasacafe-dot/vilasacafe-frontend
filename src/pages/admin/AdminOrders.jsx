@@ -143,8 +143,8 @@ export default function AdminOrders() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-espresso-700">Orders</h1>
-          <span className="flex items-center gap-2 text-xs font-semibold text-sage-700">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-sage-500" />
+          <span className="flex items-center gap-2 text-xs font-semibold text-green-700">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
             Live
           </span>
         </div>
