@@ -62,6 +62,7 @@ export const api = {
   placeOrder: (payload) => request('/orders', { method: 'POST', body: payload, auth: true }),
   myOrders: () => request('/orders/mine', { auth: true }),
   getOrder: (id) => request(`/orders/${id}`, { auth: true }),
+  getMyRewards: () => request('/me/rewards', { auth: true }),
 
   // Admin
   admin: {
@@ -82,6 +83,12 @@ export const api = {
     createCoupon: (d) => request('/admin/coupons', { method: 'POST', body: d, auth: true }),
     updateCoupon: (id, d) => request(`/admin/coupons/${id}`, { method: 'PUT', body: d, auth: true }),
     deleteCoupon: (id) => request(`/admin/coupons/${id}`, { method: 'DELETE', auth: true }),
+
+    listCampaigns: () => request('/admin/reward-campaigns', { auth: true }),
+    createCampaign: (d) => request('/admin/reward-campaigns', { method: 'POST', body: d, auth: true }),
+    updateCampaign: (id, d) =>
+      request(`/admin/reward-campaigns/${id}`, { method: 'PUT', body: d, auth: true }),
+    deleteCampaign: (id) => request(`/admin/reward-campaigns/${id}`, { method: 'DELETE', auth: true }),
 
     listBanners: () => request('/admin/banners', { auth: true }),
     createBanner: (d) => request('/admin/banners', { method: 'POST', body: d, auth: true }),

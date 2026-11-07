@@ -8,6 +8,7 @@ import {
   Ticket,
   Images,
   Printer,
+  Gift,
   LogOut,
   X,
   Power,
@@ -28,6 +29,7 @@ const PRIMARY = [
 const SECONDARY = [
   { to: '/admin/phone-orders', label: 'Phone orders', icon: Printer },
   { to: '/admin/coupons', label: 'Coupons', icon: Ticket },
+  { to: '/admin/loyalty', label: 'Loyalty Rewards', icon: Gift },
   { to: '/admin/banners', label: 'Banners', icon: Images },
 ];
 

@@ -4,6 +4,7 @@ import { ReceiptText, ChevronRight, AlertCircle } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import CafeEmpty from '../../components/CafeEmpty.jsx';
 import OrderStatusBadge from '../../components/OrderStatusBadge.jsx';
+import RewardProgress from '../../components/RewardProgress.jsx';
 import Button from '../../components/ui/Button.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import { formatINR, formatDateTime } from '../../lib/format.js';
@@ -50,6 +51,7 @@ export default function Orders() {
     return (
       <div className="mx-auto max-w-lg">
         <h1 className="mb-6 font-serif text-3xl text-espresso-700">Your orders</h1>
+        <RewardProgress />
         <CafeEmpty
           icon={<ReceiptText size={26} />}
           title="No orders yet"
@@ -67,6 +69,7 @@ export default function Orders() {
   return (
     <div className="mx-auto max-w-2xl">
       <h1 className="mb-6 font-serif text-3xl text-espresso-700">Your orders</h1>
+      <RewardProgress />
       <div className="space-y-3">
         {orders.map((o) => (
           <Link

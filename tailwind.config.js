@@ -124,6 +124,10 @@ export default {
           '60%': { transform: 'scale(1.1)' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        'confetti-fall': {
+          '0%': { transform: 'translateY(-12px) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateY(96px) rotate(380deg)', opacity: '0' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 0.3s ease-out both',
@@ -132,6 +136,7 @@ export default {
         'slide-up-bar': 'slide-up-bar 0.3s cubic-bezier(0.22,1,0.36,1) both',
         pop: 'pop 0.3s ease-out',
         'check-pop': 'check-pop 0.45s cubic-bezier(0.22,1,0.36,1) both',
+        'confetti-fall': 'confetti-fall 1.1s ease-in forwards',
       },
     },
   },
