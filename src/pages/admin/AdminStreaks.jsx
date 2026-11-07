@@ -1,14 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import {
-  Plus,
-  Search,
-  Trash2,
-  MoreHorizontal,
-  Gift,
-  Target,
-  CalendarClock,
-  Timer,
-} from 'lucide-react';
+import { Plus, Search, Trash2, MoreHorizontal, Flame, CalendarClock, Timer } from 'lucide-react';
 import { api } from '../../lib/api.js';
 import { useToast } from '../../context/ToastContext.jsx';
 import { useConfirm } from '../../context/ConfirmContext.jsx';
@@ -18,7 +9,6 @@ import Spinner from '../../components/Spinner.jsx';
 import Switch from '../../components/Switch.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 
-// datetime-local <-> ISO helpers (same convention as AdminCoupons)
 function isoToLocalInput(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -40,9 +30,9 @@ function fmtDate(iso) {
   });
 }
 
-const DURATION_PRESETS = [7, 15, 30];
+const DURATION_PRESETS = [7, 10, 15, 30];
 
-export default function AdminLoyalty() {
+export default function AdminStreaks() {
   const toast = useToast();
   const confirm = useConfirm();
   const [campaigns, setCampaigns] = useState([]);
@@ -56,7 +46,7 @@ export default function AdminLoyalty() {
       const r = await api.admin.listCampaigns();
       setCampaigns(r.campaigns || []);
     } catch (e) {
-      toast.error(e.message || 'Could not load reward campaigns.');
+      toast.error(e.message || 'Could not load streak campaigns.');
     } finally {
       setLoading(false);
     }
@@ -107,8 +97,7 @@ export default function AdminLoyalty() {
   async function remove(c) {
     const ok = await confirm({
       title: `Delete "${c.name}"?`,
-      message:
-        'Customers will stop earning this reward. Coupons already unlocked stay valid until they expire.',
+      message: 'Customers will stop earning this streak. Coupons already unlocked stay valid until they expire.',
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -134,7 +123,7 @@ export default function AdminLoyalty() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-espresso-700">Loyalty Rewards</h1>
+          <h1 className="text-xl font-bold text-espresso-700">Streak Rewards</h1>
           <p className="text-sm text-stone">
             {activeCount} active · {campaigns.length} total
           </p>
@@ -159,9 +148,9 @@ export default function AdminLoyalty() {
 
       {campaigns.length === 0 ? (
         <EmptyState
-          title="No reward campaigns yet"
-          message="Reward loyal customers: unlock a coupon when they complete a set number of orders in a time window."
-          icon={<Gift className="h-8 w-8" />}
+          title="No streak campaigns yet"
+          message="Reward loyal customers: unlock a coupon when they order on a set number of different days within a time window."
+          icon={<Flame className="h-8 w-8" />}
           action={
             <button className="btn-primary" onClick={() => setModal({})}>
               <Plus className="h-4 w-4" /> New campaign
@@ -223,7 +212,7 @@ function CampaignCard({ campaign: c, pending, onToggle, onEdit, onDelete }) {
 
       <div className="mt-2 space-y-1 text-xs text-stone">
         <p className="flex items-center gap-1.5">
-          <Target className="h-3.5 w-3.5 shrink-0" /> {c.required_orders} orders in {c.duration_days} days
+          <Flame className="h-3.5 w-3.5 shrink-0" /> Order on {c.required_streak_days} different days within {c.duration_days} days
         </p>
         <p className="flex items-center gap-1.5">
           <Timer className="h-3.5 w-3.5 shrink-0" /> Coupon valid {c.coupon_validity_days} days after unlock
@@ -254,11 +243,7 @@ function CampaignCard({ campaign: c, pending, onToggle, onEdit, onDelete }) {
             Edit
           </button>
           <div className="relative">
-            <button
-              className="btn-secondary btn-sm"
-              aria-label="More actions"
-              onClick={() => setMenuOpen((o) => !o)}
-            >
+            <button className="btn-secondary btn-sm" aria-label="More actions" onClick={() => setMenuOpen((o) => !o)}>
               <MoreHorizontal className="h-4 w-4" />
             </button>
             {menuOpen && (
@@ -306,12 +291,13 @@ function CampaignModal({ campaign, onClose, onSaved }) {
     duration_days: campaign.duration_days ?? 7,
     customDuration: !presetDuration && campaign.duration_days ? String(campaign.duration_days) : '',
     durationMode: isEdit && !presetDuration ? 'custom' : 'preset',
-    required_orders: campaign.required_orders ?? 5,
+    required_streak_days: campaign.required_streak_days ?? 5,
     discount_type: campaign.discount_type || 'percentage',
     discount_value: campaign.discount_value ?? '',
     max_discount: campaign.max_discount ?? '',
     min_order_value: campaign.min_order_value ?? 0,
     coupon_validity_days: campaign.coupon_validity_days ?? 7,
+    starts_at: isoToLocalInput(campaign.starts_at),
     ends_at: isoToLocalInput(campaign.ends_at),
     is_active: campaign.is_active ?? true,
   });
@@ -345,14 +331,18 @@ function CampaignModal({ campaign, onClose, onSaved }) {
   async function save() {
     if (!form.name.trim() || form.name.trim().length < 2) return toast.error('Enter a campaign name.');
     const duration = resolvedDuration();
-    if (!Number.isInteger(duration) || duration <= 0) return toast.error('Enter a valid duration in days.');
-    const required = Number(form.required_orders);
-    if (!Number.isInteger(required) || required <= 0) return toast.error('Enter the number of orders required.');
+    if (!Number.isInteger(duration) || duration <= 0) return toast.error('Enter a valid campaign duration in days.');
+    const requiredDays = Number(form.required_streak_days);
+    if (!Number.isInteger(requiredDays) || requiredDays <= 0) return toast.error('Enter the required streak days.');
+    if (requiredDays > duration) return toast.error('Required streak days cannot exceed the campaign duration.');
     const value = Number(form.discount_value);
     if (Number.isNaN(value) || value <= 0) return toast.error('Enter a valid discount value.');
     if (form.discount_type === 'percentage' && value > 100) return toast.error('Percentage cannot exceed 100.');
     const validity = Number(form.coupon_validity_days);
     if (!Number.isInteger(validity) || validity <= 0) return toast.error('Enter the coupon validity in days.');
+    if (form.starts_at && form.ends_at && new Date(form.ends_at) <= new Date(form.starts_at)) {
+      return toast.error('End must be after the start.');
+    }
     if (saving) return;
 
     setSaving(true);
@@ -361,13 +351,13 @@ function CampaignModal({ campaign, onClose, onSaved }) {
         name: form.name.trim(),
         description: form.description.trim() || null,
         duration_days: duration,
-        required_orders: required,
+        required_streak_days: requiredDays,
         discount_type: form.discount_type,
         discount_value: value,
-        max_discount:
-          form.discount_type === 'percentage' && form.max_discount ? Number(form.max_discount) : null,
+        max_discount: form.discount_type === 'percentage' && form.max_discount ? Number(form.max_discount) : null,
         min_order_value: Number(form.min_order_value) || 0,
         coupon_validity_days: validity,
+        starts_at: form.starts_at ? localInputToIso(form.starts_at) : undefined,
         ends_at: form.ends_at ? localInputToIso(form.ends_at) : null,
         is_active: form.is_active,
       };
@@ -389,7 +379,7 @@ function CampaignModal({ campaign, onClose, onSaved }) {
       wide
       fullScreen
       onClose={attemptClose}
-      title={isEdit ? 'Edit campaign' : 'New reward campaign'}
+      title={isEdit ? 'Edit streak campaign' : 'New streak campaign'}
       footer={
         <div className="flex gap-2">
           <button className="btn-secondary flex-1" onClick={attemptClose} disabled={saving}>
@@ -411,7 +401,7 @@ function CampaignModal({ campaign, onClose, onSaved }) {
               className="input"
               value={form.name}
               onChange={(e) => set('name', e.target.value)}
-              placeholder="Complete 5 Orders, Get 20% OFF"
+              placeholder="7-Day Fire Streak"
             />
           </div>
           <div>
@@ -421,17 +411,17 @@ function CampaignModal({ campaign, onClose, onSaved }) {
               className="input min-h-[80px] py-2.5"
               value={form.description}
               onChange={(e) => set('description', e.target.value)}
-              placeholder="Keep ordering your favourites! Complete 5 orders this week and unlock an exclusive 20% discount."
+              placeholder="Keep your ordering streak alive! Order every day and unlock an exclusive reward."
             />
-            <p className="mt-1 text-xs text-stone">Shown to customers on their rewards card.</p>
+            <p className="mt-1 text-xs text-stone">Shown to customers on their streak card.</p>
           </div>
         </Section>
 
-        {/* 2. Milestone */}
-        <Section title="Milestone">
+        {/* 2. Streak rule */}
+        <Section title="Streak rule">
           <div>
-            <label className="label">Window duration</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label className="label">Campaign duration (window)</label>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
               {DURATION_PRESETS.map((d) => (
                 <button
                   key={d}
@@ -469,25 +459,25 @@ function CampaignModal({ campaign, onClose, onSaved }) {
                 className="input mt-2 sm:max-w-[12rem]"
                 value={form.customDuration}
                 onChange={(e) => set('customDuration', e.target.value)}
-                placeholder="Days, e.g. 10"
+                placeholder="Days, e.g. 20"
               />
             )}
-            <p className="mt-1 text-xs text-stone">
-              Each customer gets this many days from their first order in a cycle.
-            </p>
+            <p className="mt-1 text-xs text-stone">The total window each customer has, starting from their first order.</p>
           </div>
           <div>
-            <label className="label" htmlFor="rc-req">Orders required</label>
+            <label className="label" htmlFor="rc-req">Required streak days</label>
             <input
               id="rc-req"
               type="number"
               inputMode="numeric"
               min="1"
               className="input sm:max-w-[12rem]"
-              value={form.required_orders}
-              onChange={(e) => set('required_orders', e.target.value)}
+              value={form.required_streak_days}
+              onChange={(e) => set('required_streak_days', e.target.value)}
             />
-            <p className="mt-1 text-xs text-stone">Counts delivered online orders only.</p>
+            <p className="mt-1 text-xs text-stone">
+              Different days the customer must order on (≤ duration). Multiple orders in one day count once.
+            </p>
           </div>
         </Section>
 
@@ -567,23 +557,35 @@ function CampaignModal({ campaign, onClose, onSaved }) {
 
         {/* 4. Schedule */}
         <Section title="Schedule">
-          <div>
-            <label className="label" htmlFor="rc-end">Campaign end date (optional)</label>
-            <input
-              id="rc-end"
-              type="datetime-local"
-              className="input"
-              value={form.ends_at}
-              onChange={(e) => set('ends_at', e.target.value)}
-            />
-            <p className="mt-1 text-xs text-stone">
-              Leave empty to run until paused. Orders delivered after this date stop counting.
-            </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label" htmlFor="rc-start">Campaign start (optional)</label>
+              <input
+                id="rc-start"
+                type="datetime-local"
+                className="input"
+                value={form.starts_at}
+                onChange={(e) => set('starts_at', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="rc-end">Campaign end (optional)</label>
+              <input
+                id="rc-end"
+                type="datetime-local"
+                className="input"
+                value={form.ends_at}
+                onChange={(e) => set('ends_at', e.target.value)}
+              />
+            </div>
           </div>
+          <p className="text-xs text-stone">
+            Leave start empty to begin immediately when active. Orders delivered after the end date stop counting.
+          </p>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-sand bg-white px-3.5 py-3">
             <div>
               <p className="text-sm font-semibold text-espresso-700">Active</p>
-              <p className="text-xs text-stone">Customers earn progress while this is on</p>
+              <p className="text-xs text-stone">Customers earn streak progress while this is on</p>
             </div>
             <Switch checked={form.is_active} onChange={(v) => set('is_active', v)} label="Campaign active" />
           </div>

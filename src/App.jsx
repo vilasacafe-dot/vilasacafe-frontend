@@ -20,7 +20,7 @@ import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminMenu from './pages/admin/AdminMenu.jsx';
 import AdminCoupons from './pages/admin/AdminCoupons.jsx';
 import AdminBanners from './pages/admin/AdminBanners.jsx';
-import AdminLoyalty from './pages/admin/AdminLoyalty.jsx';
+import AdminStreaks from './pages/admin/AdminStreaks.jsx';
 import PhoneOrders from './pages/admin/PhoneOrders.jsx';
 
 function RequireAuth({ children }) {
@@ -65,7 +65,7 @@ export default function App() {
         <Route path="phone-orders" element={<PhoneOrders />} />
         <Route path="menu" element={<AdminMenu />} />
         <Route path="coupons" element={<AdminCoupons />} />
-        <Route path="loyalty" element={<AdminLoyalty />} />
+        <Route path="streaks" element={<AdminStreaks />} />
         <Route path="banners" element={<AdminBanners />} />
       </Route>
 
